@@ -191,46 +191,45 @@ forecastDisplay.update(temp, humidity, pressure);
   }
 ```
 모든 디스플레이 항목에서 구현하는 인터페이스를 하나 더 만들어, 디스플레이 항목에서는 display() 메소드만 구현할 수 있다.  
-'''java
+```java
   interface DisplayElement{
     display()
   }
-'''
-'''java
+```
+```java
   class CurrentConditions implements Observer, DisplayElement{
     update()
     display(){
       //현재 측정값을 화면에 표시
     }
   }
-'''
-
-'''java
+```
+```java
   class statisticsDisplay implements Observer, DisplayElement{
     update()
     display(){
       // 평균/최저/최고치 표시
     }
   }
-'''
+```
 
-'''java
+```java
   class ForecastDisplay implements Observer, DisplayElement{
     update()
     display(){
       // 기상예보표시
     }
   }
-'''
+```
 
-'''java
+```java
   class ThirdPartyDisplay implements Observer, DisplayElement{
     update()
     display(){
       // 측정값을 바탕으로 다른 내용 표시
     }
   }
-'''
+```
 
 ***
 ### 가상 스테이션 구현
@@ -247,11 +246,241 @@ forecastDisplay.update(temp, humidity, pressure);
     public void update(float temp, float humidity, float pressure); // 기상 정보가 변경되었을 때 옵저버한테 전달되는 상태 값들이다.
   }
 ```
-'''java
+```java
   interface DisplayElement{
     public void display();
   }
-'''
+```
+Subject를 구현해보자
+```java
+public class WeatherData implements Subject{
+	private ArrayList<Observer> observers;
+	private float temperature;
+	private float humidity;
+	private float pressure;
+	
+	public WeatherData() {
+		// TODO Auto-generated constructor stub
+		observers = new ArrayList();
+	}
+	
+	@Override
+	public void registerObserver(Observer o) {
+		observers.add(o);
+	}
+
+	@Override
+	public void removeObserver(Observer o) {
+		int i = observers.indexOf(o);
+		if(i>=0)
+			observers.remove(i);
+	}
+
+	@Override
+	public void notifyObserver() {
+		for(int i=0;i<observers.size();i++) {
+			Observer observer = (Observer)observers.get(i);
+			observer.update(temperature, humidity, pressure);
+		}
+		
+	}
+	
+	public void measurementsChanged() {
+		notifyObserver();
+	}
+	public void setMeasurements(float temperature, float humidity, float pressure) {
+		this.temperature = temperature;
+		this.humidity = humidity;
+		this.pressure = pressure;
+		measurementsChanged();
+	}
+	//기타 메소드
+}
+
+```
+
+디스플레이 항목을 만들어 보자
+```java
+public class CurrentConditionsDisplay implements Observer, DisplayElement{
+	private float temperature;
+	private float humidity;
+	private Subject weatherData;
+	
+	public CurrentConditionsDisplay(Subject weatherData) {
+		this.weatherData = weatherData;
+		weatherData.registerObserver(this); //옵저버로 등록
+	}
+	
+	@Override
+	public void display() {
+		// TODO Auto-generated method stub
+		System.out.println("Current conditions: " + temperature + "F degrees and " + humidity + "% humidity");
+	}
+
+	@Override
+	public void update(float temperature, float humidity, float pressure) {
+		// TODO Auto-generated method stub
+		this.temperature = temperature;
+		this.humidity = humidity;
+		display();
+	}
+}
+```
+Test Code
+```java
+  public class WeatherStation {
+
+	public static void main(String[] args) {
+		WeatherData weatherData = new WeatherData();
+		
+		CurrentConditionsDisplay currentDisplay = new CurrentConditionsDisplay(weatherData);
+		
+		weatherData.setMeasurements(80, 65, 30.4f);
+		weatherData.setMeasurements(82, 70, 29.2f);
+		weatherData.setMeasurements(78, 90, 29.2f);
+	}
+}
+
+```
+***
+옵저버와 subject간 데이터를 송수신 할때는 **push와 pull이 있다.**  
+push는 데이터를 subject에서 보내는 형식(위의 코드)  
+pull은 옵저버가 데이터를 가져가는 형식이다.(getter이용)  
+둘다 자바에서 내장된 옵저버 패턴이 있기는 하다.  
+만약 subject가 확장이 된다면 상태가 더 추가가 될 것이다.  
+pull이라면 갱신된 상태를 전송하기 위해 메소드를 일일이 고칠 필요없이 getter메소드만 하나 추가하고 필요한 옵저버가 가져가게 할 수도 있다.  
+***
+자바 내장에서 옵저버 패턴을 지원을 하기도 한다(push, pull 다 가능)  
+Observer interface(java.util)와 Observable클래스를 예로 들 수 있다.
+Observer interface는 앞에서 본거랑 유사하지만  
+Observable클래스는 클래스이기에 조금 특별합니다.
+```java
+  class Observable{
+    addObserver()
+    deleteObserver()
+    notifyObserver()
+    setChanged()
+  }
+```
+그래서 WeatherData를 Observable에서 확장해야 한다.  
+고로 이젠 Observable을 확장하고, 언제 Observer에 연락할지만 알려주면 된다.
+
+  
+Observable에서 연락을 돌리는 방법은  
+1. 첫 번째로 setChanged() 메소드를 호출하여 객체의 상태가 바뀌었다는 것을 알려준다.
+2. 그 다음 notifyObservers() or notifyObservers(Object arg)둘 중 하나를 호출한다. 여기서 arg는 연락할 때 각 옵저버 객체한테 전달할 데이터 객체를 받아들인다  
+  
+옵저버가 연락을 받는 방법은
+update()를 이용하지만 조금 다른게
+update(Observable o, Object arg)로서 연락을 보내는 주제 객체가 인자로 들어가고, notifyObservers()메소드에서 인자로 전달된 데이터 객체를 넣는다(없음 null)  
+  
+push방식을 사용할때는 데이터를 notifyObservers(arg)형태로 전달해야 한다.  
+아니면 옵저버 쪽에서 전달받은 Observable객체로부터 원하는 데이터를 가져가는 pull방식을 써야한다.  
+setchanged() 메소드는 상태가 바꼈다는 것을 알리기 위한 용도로 사용된다. 그래서 나중에 notifyObservers()메소드가 호출될 때 그 메소드에서 옵저버들을 갱신한다.  
+setChanged()가 호출되지 않은 상태라면 notifyObservers가 아무리 호출해도 옵저버들은 아무 연락을 못 받는다.  
+그래서 setChanged는 연락을 최적화 시켜주어 옵저버들을 갱신하는 방법에 있어 더 광범위한 유연성을 제공하기 위해 만들어졌다.  
+```java
+  setChanged(){
+    changed = true
+  }
+  notifyObservers(Object arg){
+    if(changed){
+      목록에 있는 모든 옵저버들에 대해{
+        update(this, arg)
+      }
+      changed = false
+    }
+  }
+  notifyObservers(){
+    notifyObservers(null)
+  }
+```
+만약 자주 쓰는 경우가 생긴다면 clearChanged라는 메소드를 만들어 changed를 false로 만드는 작업을 할 수도 있고  
+hasChanged라는 메소드는 changed플래그의 현재 상태를 알려줍니다.  
+
+```java
+  import java.util.ArrayList;
+import java.util.Observable;
+
+@SuppressWarnings("deprecation")
+public class WeatherData extends Observable{
+	private float temperature;
+	private float humidity;
+	private float pressure;
+	
+	public WeatherData() {
+	}
+	
+	public void measurementsChanged() {
+		setChanged();
+		notifyObservers();
+	}
+	public void setMeasurements(float temperature, float humidity, float pressure) {
+		this.temperature = temperature;
+		this.humidity = humidity;
+		this.pressure = pressure;
+		measurementsChanged();
+	}
+	//for pull
+	public float getTemperature() {
+		return temperature;
+	}
+
+	public float getHumidity() {
+		return humidity;
+	}
+
+	public float getPressure() {
+		return pressure;
+	}
+	
+	//기타 메소드
+}
+```
+
+
+```java
+import java.util.Observable;
+import java.util.Observer;
+
+public class CurrentConditionsDisplay implements Observer, DisplayElement{
+	private float temperature;
+	private float humidity;
+	Observable observable;
+	
+	public CurrentConditionsDisplay(Observable observables) {
+		this.observable = observables;
+		observable.addObserver(this);
+	}
+
+	@Override
+	public void display() {
+		// TODO Auto-generated method stub
+		System.out.println("Current conditions: " + temperature + "F degrees and " + humidity + "% humidity");
+	}
+
+
+
+	@Override
+	public void update(Observable o, Object arg) {
+		if(o instanceof WeatherData) {
+			WeatherData weatherData = (WeatherData)o;
+			this.temperature = weatherData.getTemperature();
+			this.humidity = weatherData.getHumidity();
+			display();
+		}
+		
+	}
+
+}
+
+```
+하지만 이런식의 사용은 좋지않다  
+Observable가 클래스이기에 서브 클래스가 필요하다. 그럼 이미 superclass를 확장하는 클래스에 Observable 기능을 추가를 하지 못한다 -> 재사용성 문제  
+또 Observable인터페이스가 없어서 Observer API하고 잘 맞는 클래스를 직접 구현하는 것이 불가능하다  
+게다가 Observable API를 잘보면 setChanged() 메소드가 protected로 선언되어 있어서 Observable 서브클래스에서만 setChanged를 호출할 수 있다. 그래서 외부에선 호출할 수가 없다  
+그래서 Observable을 확장한 클래스를 쓰는 상황이라면 Observable API를 사용해도되고, 아니면 직접 구현해도 된다.
+
 
 
 
