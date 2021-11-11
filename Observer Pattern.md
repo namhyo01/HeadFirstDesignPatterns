@@ -152,13 +152,106 @@ forecastDisplay.update(temp, humidity, pressure);
 > **서로 상호작용을 하는 객체 사이에서는 가능하면 느슨하게 결합하는 디자인을 사용해야 한다**
 
 **느슨하게 결합하는 디자인을 사용하면 변경사항이 생겨도 무난히 처리할 수 있는 유연한 객체 지향 시스템을 구축할 수 있다. 객체 사이의 상호의존성을 최소화하기 때문이다.**  
+***
+이제 아까의 상황을 다시 생각해보자
+옵저버 패턴의 일대다 의존성을 생각해보면 WeatherData클래스가 일, 기상 측정치를 사용하는 디스플레이 항목은 다가 된다.  
+그러나 모호한점이 우선 기상 측정 값을 디스플레이 항목에 전달하게 되면 디스플레이에서 자기가 원하는 정보를 얻기 위해서 WeatherData객체에 등록을 하게 된다.  
+그러면 기상 스테이션에서 디스플레이 항목을 알고 있으면 메소드 하나만 호출해서 측정 값을 알려 줄 수 있다.  
+모든 디스플레이 항목이 다를 수 있다. 이 부분에서 **공통 인터페이스를 사용** 해야 한다.  
+구성요소의 형식이 달라도 똑같은 인터페이스를 구현해야만 WeatherData 객체에서 측정값을 보낼 수 있다.
+즉 모든 디스플레이에 WeatherData에서 호출할 수 있는 update()메소드가 있어야한다.  
+그리고 update()는 모든 항목들이 구현하는 공통 인터페이스에서 정의할 것이다.  
 
-
+그래서 정리해보면  
 
   
+```java
+  interface Subject{
+    registerObserver() // 옵저버 등록
+    removeObserver() // 옵저버 제거
+    notifyObserver()
+  }
+```
+```java
+  interface Observer{
+    update() // 옵저버가 될 가능성이 있는 객체에서는 무조건 이 인터페이스를 구현해야만 한다. 주제의 상태가 바뀌었을때 호출되는 update메소드만 있습니다.
+  }
+```
+이렇게 subject클래스를 구현하고,
+```java
+  class WeatherData implements Subject{
+      registerObserver(){...}
+      removeObserver(){...}
+      notifyObserver(){...}
+      //주제 클래스에서도 상태를 설정하고 알아내기 위한 setter/getter메소드가 들어갈 수 있다.
+      getTemperature()
+      gethumidity()
+      getPressure()
+      measurementsChanged()
+  }
+```
+모든 디스플레이 항목에서 구현하는 인터페이스를 하나 더 만들어, 디스플레이 항목에서는 display() 메소드만 구현할 수 있다.  
+'''java
+  interface DisplayElement{
+    display()
+  }
+'''
+'''java
+  class CurrentConditions implements Observer, DisplayElement{
+    update()
+    display(){
+      //현재 측정값을 화면에 표시
+    }
+  }
+'''
 
+'''java
+  class statisticsDisplay implements Observer, DisplayElement{
+    update()
+    display(){
+      // 평균/최저/최고치 표시
+    }
+  }
+'''
 
+'''java
+  class ForecastDisplay implements Observer, DisplayElement{
+    update()
+    display(){
+      // 기상예보표시
+    }
+  }
+'''
 
+'''java
+  class ThirdPartyDisplay implements Observer, DisplayElement{
+    update()
+    display(){
+      // 측정값을 바탕으로 다른 내용 표시
+    }
+  }
+'''
+
+***
+### 가상 스테이션 구현
+
+```java
+  interface Subject{
+    public void registerObserver(Observer o); // 옵저버 등록
+    public void removeObserver(Observer o); // 옵저버 제거
+    public void notifyObserver(); //주제 객체에 상대가 변경되었을 때 모든 옵저버들에게 알리기 위해 호출한다.
+  }
+```
+```java
+  interface Observer{
+    public void update(float temp, float humidity, float pressure); // 기상 정보가 변경되었을 때 옵저버한테 전달되는 상태 값들이다.
+  }
+```
+'''java
+  interface DisplayElement{
+    public void display();
+  }
+'''
 
 
 
