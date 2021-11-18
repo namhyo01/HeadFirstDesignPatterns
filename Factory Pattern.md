@@ -139,6 +139,113 @@ public class NYPizzaStore extends PizzaStore{
 	
 }
 ```
+**팩토리 메소드는 객체 생성을 하며, 팩토리 메소드를 이용해 객체 생성 작업을 서브클래스에 캡슐화가 가능하다**  
+이제 피자클래스를 구현해서 완성해보겠다  
+```java
+public abstract class Pizza {
+	String name;
+	String dough;
+	String sauce;
+	ArrayList<String> toppings = new ArrayList<String>();
+	
+	void prepare() {
+		System.out.println("Preparing " + name);
+		System.out.println("Tossing dough...");
+		System.out.println("Adding sauce...");
+		System.out.println("Adding toppings: ");
+		for(int i=0;i<toppings.size();i++)
+			System.out.println("   " + toppings.get(i));
+	}
+	
+	void bake() {
+		System.out.println("Bake for 25 minutes at 350");
+	}
+	void cut() {
+		System.out.println("Cutting the pizza into diagonal slices");
+	}
+	void box() {
+		System.out.println("Place pizza in official PizzaStore box");
+	}
+	public String getName() {
+		return name;
+	}
+}
+```
+이제 구상 서브 클래스를 만들어 봅니다
+```java
+public class NYStyleCheesePizza extends Pizza{
+	public NYStyleCheesePizza() {
+		name = "NY Style Sauce and Cheese Pizza";
+		dough = "Thin Crust Dough";
+		sauce = "Marinara Sauce";
+		
+		toppings.add("Grated Reggiano Cheese");
+	}
+}
+
+```
+```java
+public class ChicagoStyleCheesePizza extends Pizza{
+	public ChicagoStyleCheesePizza() {
+		name = "Chicago Style Deep Dish Cheese Pizza";
+		dough = "Extra Thick Crust Dough";
+		sauce = "Plum Tomato Sauce";
+		
+		toppings.add("Shredded Mozzarella Cheese");
+	}
+	
+	void cut() {
+		System.out.println("Cutting the pizza into square slices");
+	}
+}
+
+```
+main
+```java
+public class PizzaTestDrive {
+
+	public static void main(String[] args) {
+		PizzaStore nyStore = new NYPizzaStore();
+		PizzaStore chicagoStore = new ChicagoPizzaStore();
+		
+		Pizza pizza = nyStore.orderPizza("cheese");
+		System.out.println("Ethan ordered a " + pizza.getName() + "\n");
+		
+		pizza = chicagoStore.orderPizza("cheese");
+		System.out.println("Joel ordered a " + pizza.getName() + "\n");
+	}
+
+}
+```
+### 정리해서
+모든 팩토리 패턴에선 객체 생성을 캡슐화를 한다.  
+그리고 서브클래스에서 어떤 클래스를 만들지를 결정하게 함으로서 객체 생성을 캡슐화를 한다.  
+생산자 클래스
+![image](https://user-images.githubusercontent.com/34156840/142477260-79d573ab-17f9-424a-a396-46495ec845a6.png)  
+
+제품 클래스  
+![image](https://user-images.githubusercontent.com/34156840/142477371-e10d684f-afa6-49ad-94f0-de25e88bda0a.png)  
+이 둘은 계층 구조가 서로 병렬적으로 구성이 되어있다.  
+둘다 시작이 추상클래스 + 확장하는 구상 클래스들을 가지고 있다.  
+또한 뉴욕이나 시카고 같은 분점에 대한 구체적인 구현들은 구상 클래스들이 책임을 지고 있다.  
+***
+# 팩토리 메소드 패턴 정의
+> 팩토리 매소드란 객체를 생성하기 위한 인터페이스를 정의하는데, 어떤 클래스의 인스턴스를 만들지는 서브 클래스에서 결정을 한다. 즉 **이 패턴을 이용하면 클래스의 인스턴스를 만드는 일을 서브클래스에게 맡기는 것이다.**  
+
+***
+# 객체 의존성
+객체 인스턴스를 직접 만들게 되면 구상 클래스에 의존해야 한다.  
+앞의 PizzaStore초창기를 보면 답이 나온다.  
+그래서 우리는 이 구상 클래스에 대한 **의존성을 줄이는** 것이 좋다는 것을 이해하였다.  
+그것이 바로 
+**디자인 원칙**
+> 추상화된 것에 의존하도록 만들어라. 구상 클래스에 의존하도록 만들지 마라. => **의존성뒤집기 원칙**  
+> 여기엔 고수준 구성요소가 저수준 구성요소에 의존하면 안된다는 의미를 내포 => 항상 추상화에 의존  
+
+이 원칙을 적용시켜 보자
+
+
+
 
 
 
