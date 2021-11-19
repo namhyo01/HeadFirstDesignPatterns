@@ -242,14 +242,194 @@ public class PizzaTestDrive {
 > 추상화된 것에 의존하도록 만들어라. 구상 클래스에 의존하도록 만들지 마라. => **의존성뒤집기 원칙**  
 > 여기엔 고수준 구성요소가 저수준 구성요소에 의존하면 안된다는 의미를 내포 => 항상 추상화에 의존  
 
-이 원칙을 적용시켜 보자
+이 원칙을 적용시킨게 우리가 후에 작성한 방법이다
+그리 만들면 PizzaStore는 Pizza라는 추상 클래스에만 의존  
+다른 각종 구상 피자들도 Pizza라는 추상 클래스를 의존  
+그래서 의존성이 위에서 아래로만 가는게 아니라 뒤집혀진다  
+***
+# 추상화 팩토리 패턴
+자 이젠 원재료들에 관해 품질관리를 해봅시다  
+모든 분점이 좋은 재료를 사용하게 하는 방법이 무엇일까요? => 원재료 생산하는 공장에서 분점까지 배달을 하면 된다  
+그러나 분점마다 만드는 피자들이 다르니 동일한 재료로 배달하는건 안되므로 이 방법이 안맞게 된다  
+이렇게 **서로 다른 재료들을 제공하는 원재료군(families of ingredients)를 처리할 방법을 생각해 봐야 한다**  
+그래서 각 분점마다 각각의 원재료군을 만들어 생각을 해봅시다  
+***
+### 구현
+우선 모든 원재료를 생산할 팩토리를 위한 interface부터 만들어보면  
+```java
+public interface PizzaIngredientFactory {
+	public Dough createDough();
+	public Sauce createSauce();
+	public Cheese createCheese();
+	public Veggies[] creatVeggies();
+	public Pepperoni createPepperoni();
+	public Clams createClam();
+}
+```
+이렇게 각 재료별 생성 메소드를 정의 한다  
+그 다음 각 지역별 원재료 공장들을 구상화 합니다.  
+```java
+public class NYPizzaIngredientFactory implements PizzaIngredientFactory{
+
+	@Override
+	public Dough createDough() {
+		// TODO Auto-generated method stub
+		return ThinCrustDough();
+	}
+
+	@Override
+	public Sauce createSauce() {
+		// TODO Auto-generated method stub
+		return MarinaraSauce;
+	}
+
+	@Override
+	public Cheese createCheese() {
+		// TODO Auto-generated method stub
+		return ReggianoCheese();
+	}
+
+	@Override
+	public Veggies[] creatVeggies() {
+		Veggies veggies[] = {new Garlic(), new Onion(), new Mushroom(), new RedPepper()};
+		return veggies;
+	}
+
+	@Override
+	public Pepperoni createPepperoni() {
+		// TODO Auto-generated method stub
+		return SlicedPepperoni();
+	}
+
+	@Override
+	public Clams createClam() {
+		// TODO Auto-generated method stub
+		return new FreshClams();
+	}
+	
+}
+
+```
+자 이제 Pizza 클래스에서도 원재료만 사용하도록 코드를 수정만 하면된다.  
+```java
+public abstract class Pizza {
+	String name;
+	String dough;
+	String sauce;
+	Veggies veggies[];
+	Cheese cheese;
+	Pepperoni pepperoni;
+	Clams clam;
+	
+	abstract void prepare() {}
+	
+	void bake() {
+		System.out.println("Bake for 25 minutes at 350");
+	}
+	void cut() {
+		System.out.println("Cutting the pizza into diagonal slices");
+	}
+	void box() {
+		System.out.println("Place pizza in official PizzaStore box");
+	}
+	public String getName() {
+		return name;
+	}
+	void setName(String name) {
+		this.name = name;
+	}
+	public String toString() {
+		//Pizza name
+	}
+	
+}
+
+```
+자세히 보면 prepare메소드만 abstract로 변한건 빼고는 바뀐점이 없다  
+즉 앞에서 배웠던 것처럼 저 메소드를 추상 메소드로 활용하여 Pizza의 구상 서브클래스들이 작업을 하게 됩니다.  
+```java
+public class CheesePizza extends Pizza{
+	PizzaIngredientFactory ingredientFactory;
+	public public CheesePizza(PizzaIngredientFactory ingredientFactory) {
+		this.ingredientFactory = ingredientFactory;
+	}
+	@Override
+	void prepare() {
+		// TODO Auto-generated method stub
+		System.out.println("Preparing "+ name);
+		dough = ingredientFactory.createDough();
+		sauce = ingredientFactory.createSauce();
+		cheese = ingredientFactory.createCheese();
+	}
+	
+	
+}
+```
+이런식으로 말이다.  
+그럼 피자가게를 다시 살펴보면
+```java
+public class NYPizzaStore extends PizzaStore{
+	@Override
+	Pizza createPizza(String type) {
+		Pizza pizza = null;
+		PizzaIngredientFactory ingredientFactory =new NYPizzaIngredientFactory(); 
+		if(type.equals("cheese")) {
+			pizza = new NYStyleCheesePizza();
+			pizza.setName("New York Style Cheese Pizza");
+		}
+		else if(type.equals("veggie")) {
+			pizza = new NYStyleVeggiePizza();
+			pizza.setName("New York Style Veggie Pizza");
+		}
+		else if(type.equals("clam")) {
+			pizza = new NYStyleClamPizza();
+			pizza.setName("New York Style Clam Pizza");
+		}
+		else if(type.equals("pepperoni")) {
+			pizza = new NYStylePepperoniPizza();
+			pizza.setName("New York Style Pepperoni Pizza");
+		}
+		else
+			return null;
+		return pizza;
+	}
+	
+}
+```
+이렇듯 피자를 각 원재료 공장에서 받아 만들어진 것을 공급하게 됩니다.  
+다시한번 정리해봅시다  
+아까전의 추상 메소드 방식하고의 차이점은 이번엔 인터페이스를 이용하여 작업을 하였습니다.  
+그래서 각 지역별 재료를 만드는 공장이 interface PizzaIngredientFactory를 보면서 작성하게 된다  
+고로 이렇게 짜면 제품을 생산하는 실제 팩토리와 분리를 시킬수 있다는 장점이 있다  
+***
+# 추상 팩토리 패턴 정의
+> 추상 팩토리 패턴에선 인터페이스를 이용하여 서로 연관된, 또는 의존하는 객체를 구상 클래스를 지정하지 않고도 생성 가능하다
+
+그래서 이를 사용시 클라이언트에서 추상 interface를 통해 제품들을 공급받으며, 어떤 제품이 생산되는지는 알 필요가 없다. => 이렇게 분리를 한다.  
+![image](https://user-images.githubusercontent.com/34156840/142558628-5071f21c-3d3e-4dae-8a7c-e0f102d97dca.png)  
+이것이 그 클래스 다이어그램이다.
+***
+### 추상 팩토리를 보면 거기에 쓰이는 메소드 들은 팩토리 메소드 패턴이 아닌가?
+=> 당연히 종종 그런경우가 많다. 인터페이스의 각 메소드는 구상 제품을 생산하는 일을 하고, 추상 팩토리의 서브클래스를 만들어서 각 메소드의 구현을 하니  
+팩토리 메소드 패턴을 쓰는건당연하다
+# 추상 팩토리 패턴 vs 팩토리 메소드 패턴
+둘은 진짜 많이 비슷하고, 실제로 지금 공부하는데도 햇갈리는 부분이 많습니다.  
+1. 추상 팩토리 패턴은 객체를 써서 제품을 생성 vs 팩토리 메소드 패턴에선 클래스를 써 제품을 생성
+2. 공통점으로 둘다 클라이언트와 구상 형식을 분리시켜 준다(둘다 구상 형식은 서브클래스에서)
+3. 추상 팩토리 패턴같은 경우 제품의 추가나 변경이 있을경우 interface변경이라는 단점이 존재
+4. 추상 팩토리 패턴은 많은 제품을 생산 가능 vs 팩토리 메소드 패턴은 한가지 제품만 생산(수많은 원재료들 vs 피자하나)
+5. 추상 팩토리 패턴에서 팩토리 메소드 패턴을 사용하는 경우가 종종 있다
+# 정리하자면
+>추상 팩토리 패턴 - 클라이언트에서 연관된 일련의 제품군을 만들때 활용하자  
+>팩토리 메소드 패턴 - 클라이언트 코드와 인스턴스를 만들어야 할 구상 클래스를 분리 시켜야 할 때 활용하자 + 어떤 구상 클래스를 필요할 지 미리 알지 못하는 경우 사용하자
+>팩토리 메소드 패터는 서브클래스를 만들고 팩토리 메소드만 구현만 하면 
 
 
-
-
-
-
-
+# 공부하면서 느낀점
+솔직하게 말해서 처음으로 패턴을 공부하는데 두가지 방법이 동시에 비슷하게 나왔다. 처음에 이것을 이해하는것이 많이 힘들었고, 지금도 만약에 분리해봐 라고 하면 잘 할 자신은 없다.  
+이 패턴은 공부가 더 필요할 것 같고 좀더 찾아봐야 할것 같다.  
+하지만 객체 생성을 분리시키는 것을 봤을 때 아 이런 자주 바뀌는 부분 중 객체 생성까지도 분리가 가능하구나를 깨닫게 되었다.  
+이 패턴이 앞에서 배운 데코레이터 패턴을 위해 사용한다라는데 어떻게 활용되는지는 좀 알아봐야 할듯 하다.
 
 
 
